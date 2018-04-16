@@ -1,0 +1,31 @@
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <style name="BeritaKu" />
+
+    <style name="BeritaKu.TextAppearance" />
+
+    <style name="BeritaKu.TextAppearance.Title" parent="TextAppearance.AppCompat.Title">
+        <item name="android:fontFamily">@font/playfair_display</item>
+        <item name="android:lineSpacingMultiplier">1.1</item>
+    </style>
+
+    <style name="BeritaKu.TextAppearance.Content" parent="TextAppearance.AppCompat.Body1">
+        <item name="android:fontFamily">@font/open_sans</item>
+        <item name="android:textColor">?android:textColorSecondary</item>
+        <item name="autoSizeTextType">uniform</item>
+        <item name="android:lineSpacingMultiplier">1.33</item>
+    </style>
+
+    <style name="BeritaKu.TextAppearance.Info" parent="TextAppearance.AppCompat.Caption">
+        <item name="android:fontFamily">@font/open_sans</item>
+    </style>
+
+</resources>
