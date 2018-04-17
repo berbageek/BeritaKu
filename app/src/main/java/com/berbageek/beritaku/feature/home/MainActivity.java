@@ -29,18 +29,16 @@ public class MainActivity extends AppCompatActivity {
 
     private RecyclerView newsListRecyclerView;
     private RecyclerView.LayoutManager newsListLayoutManager;
+    private Parcelable newsListState;
 
     private ListItemAdapter newsListItemAdapter;
 
     private ProgressBar newsLoadingProgressBar;
+    private Toolbar toolbar;
 
     private NewsRepository newsRepository = new NewsApiRepository();
 
-    private Toolbar toolbar;
-
-    private TopHeadlineCallback topHeadlineCallback = new MainTopHeadlineCallback();
-
-    private Parcelable newsListState;
+    private TopHeadlineCallback topHeadlineCallback;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
 
         bindViews();
         setupToolbars();
-        setupNewsList(savedInstanceState);
+        setupNewsList();
 
         fetchTopHeadline();
     }
@@ -67,6 +65,19 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         if (newsListState != null) {
             newsListLayoutManager.onRestoreInstanceState(newsListState);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        cancelTopHeadlineRequest();
+        super.onDestroy();
+    }
+
+    private void cancelTopHeadlineRequest() {
+        if (topHeadlineCallback != null) {
+            topHeadlineCallback.cancelRequest();
+            topHeadlineCallback = null;
         }
     }
 
@@ -95,6 +106,8 @@ public class MainActivity extends AppCompatActivity {
     private void fetchTopHeadline() {
         showProgressBar();
         hideList();
+        cancelTopHeadlineRequest();
+        topHeadlineCallback = new MainTopHeadlineCallback();
         newsRepository.getTopHeadlines(topHeadlineCallback);
     }
 
@@ -125,7 +138,7 @@ public class MainActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
     }
 
-    void setupNewsList(Bundle savedInstanceState) {
+    void setupNewsList() {
         newsListRecyclerView.setHasFixedSize(false);
 
         newsListLayoutManager = new LinearLayoutManager(this);
@@ -136,23 +149,37 @@ public class MainActivity extends AppCompatActivity {
     }
 
     class MainTopHeadlineCallback implements TopHeadlineCallback {
+        private boolean isCanceled = false;
+
         @Override
         public void onArticleLoaded(List<Article> articles) {
-            hideProgressBar();
-            newsListItemAdapter.replaceListItems(convertArticle(articles));
-            showList();
+            List<ListItem> listItems = convertArticle(articles);
+            if (!isCanceled) {
+                hideProgressBar();
+                newsListItemAdapter.replaceListItems(listItems);
+                showList();
+            }
         }
 
         @Override
         public void onEmptyArticle() {
-            hideProgressBar();
-            newsListItemAdapter.clearListItems();
-            showList();
+            if (!isCanceled) {
+                hideProgressBar();
+                newsListItemAdapter.clearListItems();
+                showList();
+            }
         }
 
         @Override
         public void onError() {
-            hideProgressBar();
+            if (!isCanceled) {
+                hideProgressBar();
+            }
+        }
+
+        @Override
+        public synchronized void cancelRequest() {
+            isCanceled = true;
         }
 
         List<ListItem> convertArticle(List<Article> articles) {

@@ -10,4 +10,6 @@ public interface TopHeadlineCallback {
     void onEmptyArticle();
 
     void onError();
+
+    void cancelRequest();
 }
