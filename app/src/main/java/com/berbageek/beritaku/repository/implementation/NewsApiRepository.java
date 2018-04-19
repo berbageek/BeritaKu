@@ -5,11 +5,14 @@ import android.util.Log;
 
 import com.berbageek.beritaku.BuildConfig;
 import com.berbageek.beritaku.api.NewsApiSource;
+import com.berbageek.beritaku.api.model.data.Article;
 import com.berbageek.beritaku.api.model.response.TopHeadlinesResponse;
+import com.berbageek.beritaku.db.NewsDatabase;
 import com.berbageek.beritaku.repository.NewsRepository;
 import com.berbageek.beritaku.repository.callback.TopHeadlineCallback;
 
 import java.io.IOException;
+import java.util.List;
 
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
@@ -27,8 +30,11 @@ public class NewsApiRepository implements NewsRepository {
     private static final String API_KEY = BuildConfig.NEWSAPI_KEY;
 
     private NewsApiSource newsApiSource;
+    private NewsDatabase newsDatabase;
 
-    public NewsApiRepository() {
+    public NewsApiRepository(NewsDatabase newsDb) {
+        newsDatabase = newsDb;
+
         // create custom http client
         OkHttpClient client = new OkHttpClient.Builder()
                 .addInterceptor(new RequestInterceptor())
@@ -55,6 +61,7 @@ public class NewsApiRepository implements NewsRepository {
                     Log.d(TAG, "onResponse: " + topHeadlines.getTotalResults());
                     if ("ok".equalsIgnoreCase(topHeadlines.getStatus())) {
                         if (topHeadlines.getTotalResults() > 0 && topHeadlines.getResults() != null) {
+                            addArticlesToDb(topHeadlines.getResults());
                             callback.onArticleLoaded(topHeadlines.getResults());
                         } else {
                             callback.onEmptyArticle();
@@ -70,6 +77,12 @@ public class NewsApiRepository implements NewsRepository {
             public void onFailure(Call<TopHeadlinesResponse> call, Throwable t) {
                 Log.e(TAG, "onFailure: ", t);
                 callback.onError();
+            }
+
+            private void addArticlesToDb(List<Article> articles) {
+                for (Article article : articles) {
+                    newsDatabase.addArticle(article);
+                }
             }
         });
     }

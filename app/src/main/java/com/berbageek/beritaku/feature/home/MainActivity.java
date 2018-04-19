@@ -13,6 +13,7 @@ import android.widget.ProgressBar;
 
 import com.berbageek.beritaku.R;
 import com.berbageek.beritaku.api.model.data.Article;
+import com.berbageek.beritaku.db.NewsDatabase;
 import com.berbageek.beritaku.feature.home.adapter.ListItemAdapter;
 import com.berbageek.beritaku.feature.home.model.ListItem;
 import com.berbageek.beritaku.feature.shared.ArticleItemBuilder;
@@ -36,7 +37,7 @@ public class MainActivity extends AppCompatActivity {
     private ProgressBar newsLoadingProgressBar;
     private Toolbar toolbar;
 
-    private NewsRepository newsRepository = new NewsApiRepository();
+    private NewsRepository newsRepository;
 
     private TopHeadlineCallback topHeadlineCallback;
 
@@ -44,6 +45,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        newsRepository = new NewsApiRepository(NewsDatabase.getInstance(getApplicationContext()));
 
         restoreSavedInstaceState(savedInstanceState);
 

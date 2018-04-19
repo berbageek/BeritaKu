@@ -13,6 +13,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.berbageek.beritaku.R;
+import com.berbageek.beritaku.db.NewsDatabase;
 import com.berbageek.beritaku.feature.home.model.ArticleItem;
 import com.berbageek.beritaku.feature.home.model.ListItem;
 import com.squareup.picasso.Picasso;
@@ -110,9 +111,12 @@ public class ListItemAdapter extends RecyclerView.Adapter<ListItemAdapter.ListVi
         void openCustomTab(int position) {
             CustomTabsIntent.Builder builder = new CustomTabsIntent.Builder();
             final Context context = itemView.getContext();
+            NewsDatabase newsDatabase = NewsDatabase.getInstance(context);
             builder.setToolbarColor(context.getResources().getColor(R.color.colorPrimary));
             CustomTabsIntent customTabsIntent = builder.build();
-            customTabsIntent.launchUrl(context, Uri.parse(((ArticleItem) listItems.get(position)).getUrl()));
+            String url = ((ArticleItem) listItems.get(position)).getUrl();
+            customTabsIntent.launchUrl(context, Uri.parse(url));
+            newsDatabase.updateArticleDate(url);
         }
 
         @Override
