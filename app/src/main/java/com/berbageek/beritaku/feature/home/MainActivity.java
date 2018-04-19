@@ -1,11 +1,15 @@
 package com.berbageek.beritaku.feature.home;
 
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Parcelable;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.Loader;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -15,6 +19,7 @@ import com.berbageek.beritaku.R;
 import com.berbageek.beritaku.api.model.data.Article;
 import com.berbageek.beritaku.db.NewsDatabase;
 import com.berbageek.beritaku.feature.home.adapter.ListItemAdapter;
+import com.berbageek.beritaku.feature.home.loader.TopHeadlineLoader;
 import com.berbageek.beritaku.feature.home.model.ListItem;
 import com.berbageek.beritaku.feature.shared.ArticleItemBuilder;
 import com.berbageek.beritaku.repository.NewsRepository;
@@ -22,6 +27,7 @@ import com.berbageek.beritaku.repository.callback.TopHeadlineCallback;
 import com.berbageek.beritaku.repository.implementation.NewsApiRepository;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -41,6 +47,30 @@ public class MainActivity extends AppCompatActivity {
 
     private TopHeadlineCallback topHeadlineCallback;
 
+    private LoaderManager.LoaderCallbacks<List<Article>> topHeadlineLoaderCallbacks = new LoaderManager.LoaderCallbacks<List<Article>>() {
+        @Override
+        public Loader<List<Article>> onCreateLoader(int id, Bundle args) {
+            return new TopHeadlineLoader(MainActivity.this, newsRepository);
+        }
+
+        @Override
+        public void onLoadFinished(Loader<List<Article>> loader, List<Article> articles) {
+            hideProgressBar();
+            if (!articles.isEmpty()) {
+                List<ListItem> listItems = convertArticle(articles);
+                newsListItemAdapter.replaceListItems(listItems);
+            } else {
+                newsListItemAdapter.clearListItems();
+            }
+            showList();
+        }
+
+        @Override
+        public void onLoaderReset(Loader<List<Article>> loader) {
+            // do nothing
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -54,7 +84,8 @@ public class MainActivity extends AppCompatActivity {
         setupToolbars();
         setupNewsList();
 
-        fetchTopHeadline();
+//        fetchTopHeadline();
+        getTopHeadline();
     }
 
     private void restoreSavedInstaceState(Bundle savedInstanceState) {
@@ -93,7 +124,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.refresh) {
-            fetchTopHeadline();
+//            fetchTopHeadline();
+            refreshTopHeadline();
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -106,12 +138,28 @@ public class MainActivity extends AppCompatActivity {
         outState.putParcelable(KEY_NEWSLIST_STATE, newsListState);
     }
 
-    private void fetchTopHeadline() {
+    private void getTopHeadline() {
         showProgressBar();
         hideList();
-        cancelTopHeadlineRequest();
-        topHeadlineCallback = new MainTopHeadlineCallback();
-        newsRepository.getTopHeadlines(topHeadlineCallback);
+        getSupportLoaderManager().initLoader(
+                TopHeadlineLoader.TOP_HEADLINE_LOADER_ID,
+                null,
+                topHeadlineLoaderCallbacks
+        );
+    }
+
+    private void refreshTopHeadline() {
+        showProgressBar();
+        hideList();
+        getSupportLoaderManager().restartLoader(
+                TopHeadlineLoader.TOP_HEADLINE_LOADER_ID,
+                null,
+                topHeadlineLoaderCallbacks
+        );
+    }
+
+    private void fetchTopHeadline() {
+        new TopHeadlineAsyncTask().execute();
     }
 
     void bindViews() {
@@ -151,6 +199,47 @@ public class MainActivity extends AppCompatActivity {
         newsListRecyclerView.setAdapter(newsListItemAdapter);
     }
 
+    List<ListItem> convertArticle(List<Article> articles) {
+        List<ListItem> results = new ArrayList<>();
+        for (Article article : articles) {
+            results.add(new ArticleItemBuilder(article).build());
+        }
+        return results;
+    }
+
+    class TopHeadlineAsyncTask extends AsyncTask<Void, Void, List<Article>> {
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            showProgressBar();
+            hideList();
+        }
+
+        @Override
+        protected List<Article> doInBackground(Void... voids) {
+            try {
+                return newsRepository.getTopHeadlines();
+            } catch (Exception e) {
+                Log.d("TopHeadlineAsyncTask", "doInBackground: ");
+            }
+            return Collections.emptyList();
+        }
+
+        @Override
+        protected void onPostExecute(List<Article> articles) {
+            super.onPostExecute(articles);
+
+            hideProgressBar();
+            if (!articles.isEmpty()) {
+                List<ListItem> listItems = convertArticle(articles);
+                newsListItemAdapter.replaceListItems(listItems);
+            } else {
+                newsListItemAdapter.clearListItems();
+            }
+            showList();
+        }
+    }
+
     class MainTopHeadlineCallback implements TopHeadlineCallback {
         private boolean isCanceled = false;
 
@@ -183,14 +272,6 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public synchronized void cancelRequest() {
             isCanceled = true;
-        }
-
-        List<ListItem> convertArticle(List<Article> articles) {
-            List<ListItem> results = new ArrayList<>();
-            for (Article article : articles) {
-                results.add(new ArticleItemBuilder(article).build());
-            }
-            return results;
         }
     }
 

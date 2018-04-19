@@ -12,6 +12,7 @@ import com.berbageek.beritaku.repository.NewsRepository;
 import com.berbageek.beritaku.repository.callback.TopHeadlineCallback;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import okhttp3.Interceptor;
@@ -78,13 +79,38 @@ public class NewsApiRepository implements NewsRepository {
                 Log.e(TAG, "onFailure: ", t);
                 callback.onError();
             }
-
-            private void addArticlesToDb(List<Article> articles) {
-                for (Article article : articles) {
-                    newsDatabase.addArticle(article);
-                }
-            }
         });
+    }
+
+    @Override
+    public List<Article> getTopHeadlines() throws Exception {
+        Call<TopHeadlinesResponse> topHeadlineCall = newsApiSource.getTopHeadlines();
+        List<Article> articles = new ArrayList<>();
+        try {
+            Response<TopHeadlinesResponse> response = topHeadlineCall.execute();
+            TopHeadlinesResponse topHeadlines = response.body();
+            if (topHeadlines != null) {
+                Log.d(TAG, "onResponse: " + topHeadlines.getTotalResults());
+                if ("ok".equalsIgnoreCase(topHeadlines.getStatus())) {
+                    if (topHeadlines.getTotalResults() > 0 && topHeadlines.getResults() != null) {
+                        addArticlesToDb(topHeadlines.getResults());
+                        articles = topHeadlines.getResults();
+                    }
+                }
+            } else {
+                throw new Exception();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "onFailure: ", e);
+            throw e;
+        }
+        return articles;
+    }
+
+    private void addArticlesToDb(List<Article> articles) {
+        for (Article article : articles) {
+            newsDatabase.addArticle(article);
+        }
     }
 
     public class RequestInterceptor implements Interceptor {
